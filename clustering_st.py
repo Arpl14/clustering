@@ -26,8 +26,8 @@ def get_download_link(df):
 # Enhanced similarity function
 def enhanced_similarity(index1, index2, embeddings, additional_features, data, keywords):
     # Check for direct keyword match in keywords column
-    keywords1 = set(data['Keywords and extra information'][index1].split(', '))
-    keywords2 = set(data['Keywords and extra information'][index2].split(', '))
+    keywords1 = set(str(data['Keywords and extra information'][index1]).split(', '))
+    keywords2 = set(str(data['Keywords and extra information'][index2]).split(', '))
     if keywords1.intersection(keywords2):
         return 1.0  # Return maximum similarity score if direct keyword match
 
@@ -59,6 +59,9 @@ st.title('Company Clustering Analysis')
 
 # Load data
 data = load_data()
+
+# Preprocess the 'Keywords and extra information' column to handle missing or non-string values
+data['Keywords and extra information'] = data['Keywords and extra information'].fillna('').astype(str)
 
 # Display data table
 st.write("Data Loaded and Displayed Below:")
