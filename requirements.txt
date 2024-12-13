@@ -1,7 +1,8 @@
 streamlit
 pandas
 numpy
-scikit-learn  # This is the correct PyPI name
+scikit-learn
 sentence-transformers
 matplotlib
 xlsxwriter
+openpyxl
