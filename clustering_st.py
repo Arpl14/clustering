@@ -9,19 +9,50 @@ from io import BytesIO
 import base64
 
 # Helper function to load data
-@st.cache
+@st.cache_data
 def load_data():
-    # Load the data from the specified path
+    # Load the data from the specified file
     return pd.read_excel('Final_data_clustering.xlsx')
 
 # Helper function to create a download link for the DataFrame
 def get_download_link(df):
     towrite = BytesIO()
-    df.to_excel(towrite, index=False, engine='xlsxwriter')  # write to BytesIO buffer
+    df.to_excel(towrite, index=False, engine='xlsxwriter')  # Write to BytesIO buffer
     towrite.seek(0)
-    b64 = base64.b64encode(towrite.read()).decode()  # some strings <-> bytes conversions necessary here
+    b64 = base64.b64encode(towrite.read()).decode()  # Convert bytes to base64
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="Clustered_Data.xlsx">Download Excel file</a>'
     return href
+
+# Enhanced similarity function
+def enhanced_similarity(index1, index2, embeddings, additional_features, data, keywords):
+    # Check for direct keyword match in keywords column
+    keywords1 = set(data['Keywords and extra information'][index1].split(', '))
+    keywords2 = set(data['Keywords and extra information'][index2].split(', '))
+    if keywords1.intersection(keywords2):
+        return 1.0  # Return maximum similarity score if direct keyword match
+
+    # Base description similarity with keyword boosting
+    description_similarity = cosine_similarity([embeddings[index1]], [embeddings[index2]])[0][0]
+    text1_words = set(data['description from formnext'][index1].lower().split())
+    text2_words = set(data['description from formnext'][index2].lower().split())
+    common_keywords = text1_words.intersection(text2_words).intersection(set(keywords))
+    if common_keywords:
+        description_similarity *= 1.2  # Apply boost factor if common keywords are found
+
+    # Weights for features
+    description_weight = 0.5
+    am_process_material_weight = 0.15
+    country_category_weight = 0.10
+
+    # Additional features similarity
+    additional_similarity = cosine_similarity([additional_features[index1]], [additional_features[index2]])[0][0]
+
+    # Weighted sum of similarities
+    total_similarity = (description_weight * description_similarity +
+                        am_process_material_weight * additional_similarity +
+                        country_category_weight * additional_similarity)
+
+    return total_similarity
 
 # Streamlit page configuration
 st.title('Company Clustering Analysis')
@@ -44,7 +75,7 @@ if st.button('Process and Cluster Data'):
     encoded_columns = encoder.fit_transform(data[categorical_columns]).toarray()
     encoded_columns /= encoded_columns.max(axis=0)  # Normalize the encoded columns
 
-    # Keywords list assumed predefined as in your script
+    # Keywords list assumed predefined
     keywords = [
         'Titanium parts', 'laser', 'dlp', 'powder', 'software', 'metal', 'SLM', 'Large-scale production',
         'Cold spray technology', 'Robotic repair', 'Low-pressure cold spray', 'Glass', 'DLP', 'LED-based DLP',
@@ -70,7 +101,7 @@ if st.button('Process and Cluster Data'):
 
     for i in range(n):
         for j in range(n):
-            enhanced_similarity_matrix[i][j] = enhanced_similarity(i, j, embeddings, encoded_columns, data)
+            enhanced_similarity_matrix[i][j] = enhanced_similarity(i, j, embeddings, encoded_columns, data, keywords)
 
     # Clustering
     distance_matrix = 1 - enhanced_similarity_matrix
