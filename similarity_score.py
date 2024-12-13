@@ -16,7 +16,7 @@ def load_data():
 def calculate_similarity(input_company, data, embeddings, keywords):
     # Find the index of the input company
     try:
-        company_index = data[data['Company Name'] == input_company].index[0]
+        company_index = data[data['Company'] == input_company].index[0]
     except IndexError:
         return None, f"Company '{input_company}' not found in the dataset."
 
@@ -32,7 +32,7 @@ def calculate_similarity(input_company, data, embeddings, keywords):
             if common_keywords:
                 similarities[idx] *= 1.2  # Apply a boost factor
 
-    # Combine similarity with additional features
+    # Get top matches excluding the input company itself
     top_matches = np.argsort(similarities)[::-1][:6]  # Top 6 to exclude the input company itself
 
     # Filter out the input company itself from the results
@@ -40,7 +40,7 @@ def calculate_similarity(input_company, data, embeddings, keywords):
     for idx in top_matches:
         if idx != company_index:
             results.append({
-                "Company Name": data.iloc[idx]['Company Name'],
+                "Company Name": data.iloc[idx]['Company'],  # Use the 'Company' column
                 "Similarity Score": similarities[idx],
                 "Description": data.iloc[idx]['description from formnext']
             })
