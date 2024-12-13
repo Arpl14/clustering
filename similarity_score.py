@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import OneHotEncoder
 from sentence_transformers import SentenceTransformer
 
 # Load pre-trained model
@@ -12,51 +13,70 @@ model = SentenceTransformer('all-MiniLM-L6-v2')
 def load_data():
     return pd.read_excel('Final_data_clustering.xlsx')
 
-# Similarity calculation function
-def calculate_similarity(input_company, data, embeddings, keywords):
-    # Find the index of the input company
+# Function to calculate similarity
+def calculate_similarity(input_company, data, embeddings, encoded_columns, keywords):
     try:
         company_index = data[data['Company'] == input_company].index[0]
     except IndexError:
         return None, f"Company '{input_company}' not found in the dataset."
 
-    # Base embeddings similarity
+    # Initialize similarities
     similarities = cosine_similarity([embeddings[company_index]], embeddings)[0]
 
-    # Boost similarity for keyword matches
     for idx in range(len(data)):
         if idx != company_index:  # Skip self-comparison
+            # Description-based similarity boosting
             description1 = set(data['description from formnext'][company_index].lower().split())
             description2 = set(data['description from formnext'][idx].lower().split())
             common_keywords = description1.intersection(description2).intersection(set(keywords))
             if common_keywords:
-                similarities[idx] *= 1.2  # Apply a boost factor
+                similarities[idx] *= 1.2  # Apply boost factor for description keywords
+            
+            # Boost similarity for exact match in 'Keywords and extra information'
+            keywords1 = set(data['Keywords and extra information'][company_index].split(', '))
+            keywords2 = set(data['Keywords and extra information'][idx].split(', '))
+            if keywords1.intersection(keywords2):
+                similarities[idx] += 0.3  # Add a boost for exact matches
+        
+            # Add weightage for additional columns
+            additional_similarity = cosine_similarity([encoded_columns[company_index]], [encoded_columns[idx]])[0][0]
+            similarities[idx] += 0.5 * additional_similarity  # Adjust weightage as required
 
-    # Get top matches excluding the input company itself
-    top_matches = np.argsort(similarities)[::-1][:6]  # Top 6 to exclude the input company itself
-
-    # Filter out the input company itself from the results
+    # Get top 5 matches excluding the input company
+    top_matches = np.argsort(similarities)[::-1][:6]
     results = []
     for idx in top_matches:
         if idx != company_index:
             results.append({
-                "Company Name": data.iloc[idx]['Company'],  # Use the 'Company' column
+                "Company Name": data.iloc[idx]['Company'],
                 "Similarity Score": similarities[idx],
-                "Description": data.iloc[idx]['description from formnext']
+                "Type of AM Process": data.iloc[idx]['Type fo AM process'],
+                "Type of Material": data.iloc[idx]['Type of Material'],
+                "Category": data.iloc[idx]['Category'],
+                "Country": data.iloc[idx]['Country']
             })
 
     return results, None
 
 # Streamlit app
 st.set_page_config(layout="wide")
-st.title("Top 5 Similar Companies Finder")
+st.title("Top 5 Similar Companies Finder with Weighted Features")
 
 # Load data
 data = load_data()
 
-# Preprocess the 'description from formnext' and generate embeddings
+# Preprocess and encode categorical columns
 data['description from formnext'] = data['description from formnext'].fillna('').astype(str)
+data['Keywords and extra information'] = data['Keywords and extra information'].fillna('').astype(str)
+
+# Generate embeddings for descriptions
 embeddings = model.encode(data['description from formnext'].tolist(), show_progress_bar=False)
+
+# One-hot encode additional categorical columns
+categorical_columns = ['Type fo AM process', 'Type of Material', 'Country', 'Category']
+encoder = OneHotEncoder()
+encoded_columns = encoder.fit_transform(data[categorical_columns]).toarray()
+encoded_columns /= encoded_columns.max(axis=0)  # Normalize the encoded columns
 
 # Define keywords for boosting similarity
 keywords = [
@@ -82,7 +102,7 @@ keywords = [
 input_company = st.text_input("Enter the Company Name:", placeholder="E.g., XYZ Ltd.")
 
 if input_company:
-    results, error = calculate_similarity(input_company, data, embeddings, keywords)
+    results, error = calculate_similarity(input_company, data, embeddings, encoded_columns, keywords)
 
     if error:
         st.error(error)
