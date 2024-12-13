@@ -1,7 +1,7 @@
-streamlit==1.10.0
-pandas==1.3.4
-numpy==1.21.4
-scikit-learn==1.0.1
-sentence-transformers==2.2.0
-matplotlib==3.4.3
-xlsxwriter==1.4.4
+streamlit
+pandas
+numpy
+scikit-learn==0.24.2  # You can specify a version known to be compatible with your code
+sentence-transformers
+matplotlib
+xlsxwriter
