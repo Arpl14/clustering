@@ -108,7 +108,7 @@ if st.button('Process and Cluster Data'):
 
     # Clustering
     distance_matrix = 1 - enhanced_similarity_matrix
-    clustering = AgglomerativeClustering(n_clusters=5, metric='precomputed', linkage='complete')
+    clustering = AgglomerativeClustering(n_clusters=8, metric='precomputed', linkage='complete')
     clusters = clustering.fit_predict(distance_matrix)
     data['Cluster'] = clusters
 
