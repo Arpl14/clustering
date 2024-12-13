@@ -10,8 +10,8 @@ import base64
 import matplotlib.pyplot as plt
 
 # Helper function to load data
-def load_data(uploaded_file):
-    return pd.read_excel(uploaded_file)
+def load_data(Final_data_clustering.xlsx):
+    return pd.read_excel(Final_data_clustering.xlsx)
 
 # Function to generate embeddings and process data
 def process_data(data):
