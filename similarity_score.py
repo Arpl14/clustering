@@ -50,17 +50,18 @@ def calculate_similarity(input_company, data, embeddings, encoded_columns, keywo
             results.append({
                 "Company Name": data.iloc[idx]['Company'],
                 "Similarity Score": similarities[idx],
+                "Description": data.iloc[idx]['description from formnext'],
                 "Type of AM Process": data.iloc[idx]['Type fo AM process'],
                 "Type of Material": data.iloc[idx]['Type of Material'],
                 "Category": data.iloc[idx]['Category'],
                 "Country": data.iloc[idx]['Country']
             })
 
-    return results, None
+    return company_index, results, None
 
 # Streamlit app
 st.set_page_config(layout="wide")
-st.title("Top 5 Similar Companies Finder with Weighted Features")
+st.title("Top 5 Similar Companies Finder with Detailed Descriptions")
 
 # Load data
 data = load_data()
@@ -102,15 +103,20 @@ keywords = [
 input_company = st.text_input("Enter the Company Name:", placeholder="E.g., XYZ Ltd.")
 
 if input_company:
-    results, error = calculate_similarity(input_company, data, embeddings, encoded_columns, keywords)
+    company_index, results, error = calculate_similarity(input_company, data, embeddings, encoded_columns, keywords)
 
     if error:
         st.error(error)
     else:
+        # Display input company details
+        st.subheader(f"Details for Input Company: '{input_company}'")
+        input_company_details = data.iloc[company_index]
+        st.write(input_company_details.to_frame().T)
+
         # Display results
         st.subheader(f"Top 5 Most Similar Companies to '{input_company}':")
         results_df = pd.DataFrame(results)
-        st.table(results_df)
+        st.write(results_df)
 
         # Option to download results
         @st.cache_data
